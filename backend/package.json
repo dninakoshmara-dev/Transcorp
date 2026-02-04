@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start:dev": "nest start --watch",
-    "build": "nest build",
+    "build": "npx nest build"
     "start": "node dist/main.js",
     "test:e2e": "jest -c test/jest-e2e.json",
     "test:e2e:testdb": "sh -lc \"export DATABASE_URL='postgresql://postgres:postgres@db_test:5432/transport_test?schema=public' && npx prisma migrate reset --force && npm run test:e2e\"",
