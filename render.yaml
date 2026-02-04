@@ -18,4 +18,3 @@ databases:
   - name: transcorp-db
     plan: free
     databaseName: transport
-    user: postgres
