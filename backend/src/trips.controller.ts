@@ -122,7 +122,7 @@ export class TripsController {
       }
 
       const notDelivered = tripWithShipments.shipments.filter(
-        (ts) =>
+        (ts: any) =>
           (ts.palletsDelivered ?? 0) < (ts.palletsAllocated ?? 0),
       );
 
@@ -130,7 +130,7 @@ export class TripsController {
         const details = notDelivered
           .slice(0, 5)
           .map(
-            (x) =>
+            (x: any) =>
               `${x.shipmentId}:${x.palletsDelivered}/${x.palletsAllocated}`,
           )
           .join(', ');
