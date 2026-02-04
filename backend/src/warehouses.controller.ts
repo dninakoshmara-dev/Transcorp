@@ -7,7 +7,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
-import { Prisma, WarehouseCode } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 @Controller('api/warehouses')
 export class WarehousesController {
@@ -28,7 +28,7 @@ export class WarehousesController {
       address?: string;
     },
   ) {
-    const allowed = Object.values(WarehouseCode);
+    const allowed = ['BG','NL','MAIN','MAIN2'] as const;\ntype WarehouseCode = (typeof allowed)[number];
 
     // ❌ невалиден код → 400
     if (!allowed.includes(body.code as WarehouseCode)) {
