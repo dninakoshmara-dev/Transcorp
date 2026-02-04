@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Get,
@@ -7,7 +7,6 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 
 @Controller('api/warehouses')
 export class WarehousesController {
@@ -28,34 +27,30 @@ export class WarehousesController {
       address?: string;
     },
   ) {
-    const allowed = ['BG','NL','MAIN','MAIN2'] as const;\ntype WarehouseCode = (typeof allowed)[number];
+    const allowed = ['BG', 'NL', 'MAIN', 'MAIN2'] as const;
+    type WarehouseCode = (typeof allowed)[number];
 
-    // ❌ невалиден код → 400
+    if (!body || !body.code || !body.name || !body.country) {
+      throw new BadRequestException('Missing required fields');
+    }
+
     if (!allowed.includes(body.code as WarehouseCode)) {
-      throw new BadRequestException(
-        `Invalid WarehouseCode. Allowed: ${allowed.join(', ')}`,
-      );
+      throw new BadRequestException(`Invalid code. Allowed: ${allowed.join(', ')}`);
     }
 
     try {
-      // ✅ създаване
       return await this.prisma.warehouse.create({
         data: {
-          code: body.code as WarehouseCode,
+          code: body.code as any,
           name: body.name,
           country: body.country,
           address: body.address,
         },
       });
-    } catch (e) {
-      // ❌ уникален code → 409 вместо 500
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
         throw new ConflictException('Warehouse code already exists');
       }
-
       throw e;
     }
   }
