@@ -1,0 +1,268 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum Role {
+  ADMIN
+  DISPATCHER
+  WAREHOUSE_BG
+  WAREHOUSE_NL
+  DRIVER
+}
+
+enum WarehouseCode {
+  BG
+  NL
+  MAIN
+  MAIN2
+}
+
+enum TripStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum StopType {
+  PICKUP
+  DROP
+}
+
+enum DocType {
+  CMR
+  POD
+  PHOTO
+  OTHER
+}
+
+enum ExpenseType {
+  FUEL
+  TOLL
+  FERRY
+  PARKING
+  OTHER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Warehouse {
+  id         String        @id @default(cuid())
+  code       WarehouseCode @unique
+  name       String
+  country    String
+  address    String?
+  shipments  Shipment[]
+  trucks     Truck[]
+  startTrips Trip[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Truck {
+  id              String    @id @default(cuid())
+  plate           String    @unique
+  capacityPallet  Int
+  capacityKg      Int?
+  homeWarehouseId String
+  homeWarehouse   Warehouse @relation(fields: [homeWarehouseId], references: [id])
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  trips           Trip[]
+}
+
+model Driver {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  trips     Trip[]
+}
+
+model Customer {
+  id        String     @id @default(cuid())
+  name      String
+  vat       String?
+  address   String?
+  email     String?
+  phone     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  shipments Shipment[]
+  trips     Trip[]
+}
+
+model Shipment {
+  id           String  @id @default(cuid())
+  refNo        String
+  description  String?
+  palletsTotal Int
+  weightKg     Int?
+  notes        String?
+  statusCalc   String?
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tripItems TripShipment[]
+  documents Document[]
+  moves     WarehouseMove[]
+
+  @@unique([customerId, refNo])
+  @@index([warehouseId])
+  @@index([customerId])
+}
+
+model Trip {
+  id              String     @id @default(cuid())
+  status          TripStatus @default(PLANNED)
+  plannedStartAt  DateTime?
+  plannedEndAt    DateTime?
+  revenueAmount   Int?
+  revenueCurrency String?
+
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id])
+
+  driverId String?
+  driver   Driver? @relation(fields: [driverId], references: [id])
+
+  startWarehouseId String
+  startWarehouse   Warehouse @relation(fields: [startWarehouseId], references: [id])
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stops     Stop[]
+  shipments TripShipment[]
+  documents Document[]
+  expenses  Expense[]
+  startedAt   DateTime?
+  completedAt DateTime?
+
+}
+
+model Stop {
+  id     String @id @default(cuid())
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  type         StopType
+  seq          Int
+  address      String
+  contactName  String?
+  contactPhone String?
+  windowFrom   DateTime?
+  windowTo     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tripShipments TripShipment[] @relation("DropStopShipments")
+
+  @@unique([tripId, seq])
+  @@index([tripId])
+}
+
+model TripShipment {
+  id String @id @default(cuid())
+
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id])
+
+  palletsAllocated Int
+  palletsLoaded    Int @default(0)
+  palletsDelivered Int @default(0)
+
+  dropStopId String?
+  dropStop   Stop?   @relation("DropStopShipments", fields: [dropStopId], references: [id])
+
+  status    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tripId, shipmentId])
+  @@index([shipmentId])
+  @@index([tripId])
+}
+
+model WarehouseMove {
+  id         String   @id @default(cuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  fromWarehouseId String?
+  toWarehouseId   String?
+
+  type        String
+  palletsQty  Int
+  tripId      String?
+  createdAt   DateTime @default(now())
+  createdById String?
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  docType      DocType
+  fileUrl      String
+  filename     String?
+  uploadedAt   DateTime @default(now())
+  uploadedById String?
+
+  tripId String?
+  trip   Trip?   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  shipmentId String?
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([shipmentId])
+}
+
+model Expense {
+  id     String @id @default(cuid())
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  type        ExpenseType
+  amount      Int
+  currency    String      @default("EUR")
+  note        String?
+  receiptUrl  String?
+  createdAt   DateTime    @default(now())
+  createdById String?
+
+  @@index([tripId])
+}

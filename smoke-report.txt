@@ -1,0 +1,22 @@
+﻿Transport System Smoke Test
+Started: 2026-02-02T23:37:57+02:00
+Working dir: C:\Users\bg\transport-system
+
+==> 1) Docker services status (docker compose ps)
+NAME                 IMAGE         COMMAND                  SERVICE    CREATED       STATUS       PORTS
+transport_backend    node:20       "docker-entrypoint.sтАж"   backend    2 hours ago   Up 2 hours   0.0.0.0:3001->3001/tcp, [::]:3001->3001/tcp
+transport_db         postgres:15   "docker-entrypoint.sтАж"   db         3 hours ago   Up 3 hours   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+transport_frontend   node:20       "docker-entrypoint.sтАж"   frontend   3 hours ago   Up 3 hours   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+[OK]   1) Docker services status (docker compose ps)
+
+==> 2) docker compose up -d
+
+[OK]   2) docker compose up -d
+
+==> 3) Wait for backend health (HTTP 200 on /api/trips)
+[OK]   Backend responding: http://localhost:3001/api/trips
+
+==> 4) Prisma migrate status
+[FAIL] 4) Prisma migrate status :: Environment variables loaded from .env
+
+==> 5) Unit tests (docker compose exec backend npm test)

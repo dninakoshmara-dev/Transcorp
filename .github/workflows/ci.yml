@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start (db + db_test + backend)
+        run: |
+          docker compose up -d --build db db_test backend
+          docker compose ps
+
+      - name: Run e2e on test DB
+        run: |
+          docker compose exec -T backend npm run test:e2e:testdb
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== BACKEND LOGS ==="
+          docker compose logs --no-color backend || true
+          echo "=== DB_TEST LOGS ==="
+          docker compose logs --no-color db_test || true
+          echo "=== DB LOGS ==="
+          docker compose logs --no-color db || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down -v --remove-orphans
+
+  frontend_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
