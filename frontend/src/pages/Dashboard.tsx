@@ -30,7 +30,7 @@ type TripsResponse = {
 
 // Ако имаш Vite proxy (примерно /api), можеш да сложиш API_BASE = "".
 // По твоите тестове бекендът е на localhost:3001:
-const API_BASE = "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 function formatDate(iso?: string | null) {
   if (!iso) return "-";
