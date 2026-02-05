@@ -47,21 +47,27 @@ export class TrucksController {
     return this.ensureTruckExists(id);
   }
 
-  // ✅ POST CREATE
-    @Post('api/trucks')
+  // ✅ POST CREATE TRUCK
+  @Post('api/trucks')
   create(@Body() dto: CreateTruckDto) {
-  return this.prisma.truck.create({
-    data: {
-      plate: dto.plate,
-      capacityPallet: dto.capacityPallet,
-      homeWarehouse: {
-        connect: { id: dto.homeWarehouseId },
-      },
-    },
-  });
-}
+    return this.prisma.truck.create({
+      data: {
+        plate: dto.plate,
+        capacityPallet: dto.capacityPallet,
 
-  // ✅ PATCH UPDATE
+        // ✅ FIX: save capacityKg
+        capacityKg: dto.capacityKg ?? null,
+
+        homeWarehouse: {
+          connect: { id: dto.homeWarehouseId },
+        },
+
+        isActive: true,
+      },
+    });
+  }
+
+  // ✅ PATCH UPDATE TRUCK
   @Patch('api/trucks/:id')
   async update(@Param('id') id: string, @Body() dto: UpdateTruckDto) {
     await this.ensureTruckExists(id);
@@ -69,12 +75,30 @@ export class TrucksController {
     return this.prisma.truck.update({
       where: { id },
       data: {
-        ...(dto.plate ? { plate: dto.plate } : {}),
+        ...(dto.plate !== undefined ? { plate: dto.plate } : {}),
+        ...(dto.capacityPallet !== undefined
+          ? { capacityPallet: dto.capacityPallet }
+          : {}),
+
+        // ✅ FIX: allow updating capacityKg
+        ...(dto.capacityKg !== undefined
+          ? { capacityKg: dto.capacityKg }
+          : {}),
+
+        ...(dto.homeWarehouseId !== undefined
+          ? {
+              homeWarehouse: {
+                connect: { id: dto.homeWarehouseId },
+              },
+            }
+          : {}),
+
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
       },
     });
   }
 
-  // ✅ DELETE
+  // ✅ DELETE TRUCK
   @Delete('api/trucks/:id')
   async remove(@Param('id') id: string) {
     await this.ensureTruckExists(id);
