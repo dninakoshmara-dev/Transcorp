@@ -28,7 +28,7 @@ services:
   backend:
     build: ./backend
     container_name: transport_backend
-    command: npm run start:dev
+    command: sh -c "npm run build && node dist/src/main.js"
     env_file:
       - ./backend/.env
     depends_on:
