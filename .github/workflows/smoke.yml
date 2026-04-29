@@ -6,6 +6,7 @@ on:
       - main
       - master
       - develop
+      - fix/**
   pull_request:
     branches:
       - main
@@ -26,6 +27,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Create backend env file
+        shell: bash
+        run: |
+          cat > backend/.env <<'EOF'
+          NODE_ENV=development
+          PORT=3001
+          DATABASE_URL=postgresql://postgres:postgres@db:5432/transcorp?schema=public
+          JWT_SECRET=ci-test-secret
+          EOF
 
       - name: Start Docker stack
         run: docker compose up -d
