@@ -41,10 +41,10 @@ jobs:
       - name: Start Docker stack
         run: docker compose up -d
 
-      - name: Wait and seed
-        shell: pwsh
-        run: |
-          ./SMOKE_TEST.ps1 -BaseUrl "http://localhost:3001" -Seed -WaitSeconds 90
+      - name: Run smoke test
+  shell: pwsh
+  run: |
+    ./SMOKE_TEST.ps1 -BaseUrl "http://localhost:3001" -WaitSeconds 90 
 
       - name: Show Docker logs on failure
         if: failure()
