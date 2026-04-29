@@ -5,10 +5,23 @@
   Post,
   BadRequestException,
   ConflictException,
+  UseGuards,
 } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 
-@Controller('api/warehouses')
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { RolesGuard } from './auth/roles.guard';
+import { Roles } from './auth/roles.decorator';
+
+function mustString(name: string, v: unknown): string {
+  if (typeof v !== 'string' || v.trim().length === 0) {
+    throw new BadRequestException(`${name} is required and must be a non-empty string`);
+  }
+  return v.trim();
+}
+
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('warehouses')
 export class WarehousesController {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -17,6 +30,7 @@ export class WarehousesController {
     return this.prisma.warehouse.findMany();
   }
 
+  @Roles('ADMIN')
   @Post()
   async create(
     @Body()
@@ -42,9 +56,9 @@ export class WarehousesController {
       return await this.prisma.warehouse.create({
         data: {
           code: body.code as any,
-          name: body.name,
-          country: body.country,
-          address: body.address,
+          name: mustString('name', body.name),
+          country: mustString('country', body.country),
+          address: mustString('address', body.address),
         },
       });
     } catch (e: any) {

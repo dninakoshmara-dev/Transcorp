@@ -1,22 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class DriversService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
+  // Контролерът очаква findAll()
+  async findAll() {
     return this.prisma.driver.findMany({
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  create(data: { name: string; phone?: string; isActive?: boolean }) {
+  async create(data: any) {
+    if (!data || typeof data !== 'object') {
+      throw new BadRequestException('Body is required');
+    }
+
+    const name = data.name ? String(data.name).trim() : '';
+    if (!name) throw new BadRequestException('name is required');
+
+    const phone = data.phone ? String(data.phone).trim() : null;
+
+    // Не добавяме isActive, защото в твоя Prisma schema Driver няма такова поле
     return this.prisma.driver.create({
       data: {
-        name: data.name,
-        phone: data.phone,
-        isActive: data.isActive ?? true,
+        name,
+        ...(phone ? { phone } : {}),
       },
     });
   }

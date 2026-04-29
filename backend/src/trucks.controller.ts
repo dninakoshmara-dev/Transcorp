@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -7,12 +7,28 @@ import {
   Param,
   Patch,
   Post,
+  BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 
 import { PrismaService } from './prisma/prisma.service';
 import { CreateTruckDto } from './dto/create-truck.dto';
 import { UpdateTruckDto } from './dto/update-truck.dto';
 
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { RolesGuard } from './auth/roles.guard';
+import { Roles } from './auth/roles.decorator';
+
+function mustNumber(name: string, v: unknown): number {
+  if (v === null || v === undefined || v === '') {
+    throw new BadRequestException(`${name} is required`);
+  }
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n)) throw new BadRequestException(`${name} must be a number`);
+  return n;
+}
+
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller()
 export class TrucksController {
   constructor(private readonly prisma: PrismaService) {}
@@ -23,52 +39,38 @@ export class TrucksController {
     return truck;
   }
 
-  // ✅ GET ALL (legacy)
+  // GET ALL -> /api/trucks
   @Get('trucks')
-  findAllLegacy() {
+  findAll() {
     return this.prisma.truck.findMany();
   }
 
-  // ✅ GET ALL (api)
-  @Get('api/trucks')
-  findAllApi() {
-    return this.prisma.truck.findMany();
-  }
-
-  // ✅ GET BY ID (legacy)
+  // GET BY ID -> /api/trucks/:id
   @Get('trucks/:id')
-  async findOneLegacy(@Param('id') id: string) {
+  async findOne(@Param('id') id: string) {
     return this.ensureTruckExists(id);
   }
 
-  // ✅ GET BY ID (api)
-  @Get('api/trucks/:id')
-  async findOneApi(@Param('id') id: string) {
-    return this.ensureTruckExists(id);
-  }
-
-  // ✅ POST CREATE TRUCK
-  @Post('api/trucks')
+  // POST CREATE -> /api/trucks (ADMIN)
+  @Roles('ADMIN')
+  @Post('trucks')
   create(@Body() dto: CreateTruckDto) {
+    const capacityKg = mustNumber('capacityKg', (dto as any).capacityKg);
+
     return this.prisma.truck.create({
       data: {
         plate: dto.plate,
         capacityPallet: dto.capacityPallet,
-
-        // ✅ FIX: save capacityKg
-        capacityKg: dto.capacityKg ?? null,
-
-        homeWarehouse: {
-          connect: { id: dto.homeWarehouseId },
-        },
-
+        capacityKg,
+        homeWarehouse: { connect: { id: dto.homeWarehouseId } },
         isActive: true,
       },
     });
   }
 
-  // ✅ PATCH UPDATE TRUCK
-  @Patch('api/trucks/:id')
+  // PATCH UPDATE -> /api/trucks/:id (ADMIN)
+  @Roles('ADMIN')
+  @Patch('trucks/:id')
   async update(@Param('id') id: string, @Body() dto: UpdateTruckDto) {
     await this.ensureTruckExists(id);
 
@@ -76,35 +78,22 @@ export class TrucksController {
       where: { id },
       data: {
         ...(dto.plate !== undefined ? { plate: dto.plate } : {}),
-        ...(dto.capacityPallet !== undefined
-          ? { capacityPallet: dto.capacityPallet }
-          : {}),
-
-        // ✅ FIX: allow updating capacityKg
-        ...(dto.capacityKg !== undefined
-          ? { capacityKg: dto.capacityKg }
-          : {}),
-
+        ...(dto.capacityPallet !== undefined ? { capacityPallet: dto.capacityPallet } : {}),
+        ...(dto.capacityKg !== undefined ? { capacityKg: dto.capacityKg } : {}),
         ...(dto.homeWarehouseId !== undefined
-          ? {
-              homeWarehouse: {
-                connect: { id: dto.homeWarehouseId },
-              },
-            }
+          ? { homeWarehouse: { connect: { id: dto.homeWarehouseId } } }
           : {}),
-
         ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
       },
     });
   }
 
-  // ✅ DELETE TRUCK
-  @Delete('api/trucks/:id')
+  // DELETE -> /api/trucks/:id (ADMIN)
+  @Roles('ADMIN')
+  @Delete('trucks/:id')
   async remove(@Param('id') id: string) {
     await this.ensureTruckExists(id);
-
     await this.prisma.truck.delete({ where: { id } });
-
     return { ok: true };
   }
 }
